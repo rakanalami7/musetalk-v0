@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Logs
+*.log
+logs/
+
+# Results
+results/
+outputs/
+
+# Environment
+.env.example
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Large model files (should be mounted or downloaded separately)
+models/
+checkpoints/
+weights/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+

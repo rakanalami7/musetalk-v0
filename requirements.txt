@@ -18,3 +18,21 @@ imageio[ffmpeg]
 omegaconf
 ffmpeg-python
 moviepy
+
+# FastAPI and WebSocket dependencies for server
+fastapi>=0.115.2
+uvicorn[standard]==0.32.0
+websockets==13.1
+python-multipart>=0.0.18
+
+# External API clients
+# OpenAI SDK for Chat Completions and Whisper API
+# Docs: https://platform.openai.com/docs/api-reference
+openai==1.54.0
+
+# ElevenLabs SDK for Text-to-Speech streaming
+# Docs: https://elevenlabs.io/docs/api-reference/introduction
+elevenlabs==1.8.0
+
+# Environment variable management
+python-dotenv==1.0.1

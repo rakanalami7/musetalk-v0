@@ -1,18 +1,61 @@
-.DS_Store
-*.log
-.idea/
-.vscode/
-*.pyc
-.ipynb_checkpoints
-results/
-models/
-**/__pycache__/
+# Environment variables
+.env
+
+# Python
+__pycache__/
 *.py[cod]
 *$py.class
-dataset/
-ffmpeg*
-ffmprobe*
-ffplay*
-debug
-exp_out
-.gradio
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model weights (if not tracked)
+models/
+*.pth
+*.pt
+*.bin
+*.ckpt
+
+# Results and temporary files
+results/
+temp/
+tmp/
+*.mp4
+*.wav
+*.png
+*.jpg
+*.jpeg
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
