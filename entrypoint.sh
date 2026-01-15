@@ -3,10 +3,12 @@ set -e
 
 echo "🚀 Starting MuseTalk Server..."
 
-# Check if models directory exists and has content
-if [ ! -d "models" ] || [ -z "$(ls -A models)" ]; then
-    echo "⚠️  Models directory is empty. Downloading model weights..."
-    ./download_weights.sh || echo "⚠️  Failed to download weights. Please mount models directory."
+# Check if critical model files exist
+if [ ! -f "models/musetalkV15/unet.pth" ]; then
+    echo "⚠️  Models not found. Downloading model weights..."
+    python download_weights.py || { echo "❌ Failed to download weights. Exiting."; exit 1; }
+else
+    echo "✅ Models already present, skipping download"
 fi
 
 # Check for GPU
@@ -39,4 +41,4 @@ mkdir -p results logs
 
 # Start the server
 echo "🎬 Starting FastAPI server on port 8000..."
-exec "$@"
+exec python -m uvicorn server:app --host 0.0.0.0 --port 8000

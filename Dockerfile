@@ -53,10 +53,8 @@ RUN mkdir -p models/dwpose \
     results \
     logs
 
-# Download model weights (if not already present)
-# Note: You should download these manually or mount them as volumes
-# to avoid large image sizes and long build times
-RUN chmod +x download_weights.sh
+# Make download scripts executable
+RUN chmod +x download_weights.sh download_weights.py
 
 # Expose port
 EXPOSE 8000
