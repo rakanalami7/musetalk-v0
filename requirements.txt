@@ -1,8 +1,8 @@
 diffusers==0.30.2
 accelerate==0.28.0
-numpy==1.23.5
-tensorflow==2.12.0
-tensorboard==2.12.0
+numpy==1.26.4
+tensorflow==2.18.0
+tensorboard==2.18.0
 opencv-python==4.9.0.80
 soundfile==0.12.1
 transformers==4.39.2
@@ -20,6 +20,13 @@ imageio[ffmpeg]
 omegaconf
 ffmpeg-python
 moviepy
+
+# OpenMMLab packages for pose estimation (DWPose)
+# Install via: pip install openmim && mim install mmcv==2.0.1 mmdet==3.1.0 mmpose==1.1.0
+openmim
+mmcv==2.0.1
+mmdet==3.1.0
+mmpose==1.1.0
 
 # FastAPI and WebSocket dependencies for server
 fastapi>=0.115.2
