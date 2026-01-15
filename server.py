@@ -414,18 +414,24 @@ async def prepare_avatar(session_id: str, video_path: str, bbox_shift: int):
         session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=20)
         
         # Create Avatar instance
-        # Note: We need to modify Avatar class to work with our setup
-        # For now, we'll create a placeholder
         batch_size = int(os.getenv("BATCH_SIZE", "8"))
         
         logger.info(f"Creating Avatar instance for session {session_id}")
         session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=50)
         
-        # TODO: Integrate actual Avatar class initialization
-        # This requires modifying the Avatar class to accept our global models
-        # For now, mark as ready
+        # Initialize Avatar with the uploaded video
+        avatar = Avatar(
+            avatar_id=video_path,
+            video_path=video_path,
+            bbox_shift=bbox_shift,
+            batch_size=batch_size,
+            preparation=True
+        )
         
-        await asyncio.sleep(2)  # Simulate preparation time
+        # Store avatar instance in session
+        session = session_manager.get_session(session_id)
+        if session:
+            session.avatar_instance = avatar
         
         session_manager.update_session_status(session_id, SessionStatus.READY, progress=100)
         logger.info(f"Avatar ready for session {session_id}")
