@@ -126,7 +126,8 @@ class SimplifiedAvatar:
         for i in range(0, len(self.frames), self.batch_size):
             batch = frames_tensor[i:i + self.batch_size]
             with torch.no_grad():
-                latents = self.vae.encode(batch).latent_dist.sample()
+                # MuseTalk VAE wrapper: vae.vae.encode()
+                latents = self.vae.vae.encode(batch).latent_dist.sample()
                 latents = latents * 0.18215  # VAE scaling factor
             latent_list.append(latents)
         
@@ -181,7 +182,7 @@ class SimplifiedAvatar:
             
             # Decode latent to image
             latents = 1 / 0.18215 * noise_pred
-            image = self.vae.decode(latents).sample
+            image = self.vae.vae.decode(latents).sample
             
             # Convert to numpy
             image = (image / 2 + 0.5).clamp(0, 1)
