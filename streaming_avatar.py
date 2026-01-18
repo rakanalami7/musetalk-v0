@@ -173,6 +173,10 @@ class StreamingAvatar:
         self.models = models
         self.fps = fps
         
+        # Store API keys for later use
+        self.openai_api_key = openai_api_key
+        self.elevenlabs_api_key = elevenlabs_api_key
+        
         # Initialize API clients with proper configuration
         # Following official documentation:
         # - OpenAI: https://platform.openai.com/docs/api-reference
