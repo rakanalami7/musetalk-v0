@@ -273,6 +273,104 @@ class StreamingAvatar:
         
         return None
     
+    async def _process_text_input(self, transcript: str):
+        """
+        Process text input directly (STT done on client-side with ElevenLabs Scribe):
+        1. LLM Response (OpenAI)
+        2. Text-to-Speech (ElevenLabs)
+        3. Lip-sync Video Generation (MuseTalk)
+        
+        Args:
+            transcript: Transcribed text from client-side STT
+        """
+        if self.is_processing:
+            logger.warning("⚠️  Already processing, skipping")
+            return
+        
+        self.is_processing = True
+        self.current_state = "processing"
+        pipeline_start_time = time.time()
+        
+        try:
+            logger.info(f"🔄 Processing text input: {transcript}")
+            
+            if not transcript or len(transcript.strip()) == 0:
+                logger.warning("⚠️  Empty transcript, skipping")
+                return
+            
+            # Send transcript confirmation to client
+            yield {
+                "type": "transcript",
+                "text": transcript,
+                "is_final": True,
+                "timestamp": time.time()
+            }
+            
+            # Add to conversation history
+            self.conversation_history.append({
+                "role": "user",
+                "content": transcript
+            })
+            
+            # Step 1: Get LLM response
+            llm_start = time.time()
+            ai_response = await self._get_ai_response(transcript)
+            llm_duration = (time.time() - llm_start) * 1000
+            self.metrics.record_llm_response(llm_duration)
+            
+            logger.info(f"🤖 AI Response: {ai_response}")
+            
+            # Add to conversation history
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": ai_response
+            })
+            
+            # Start transition from idle to talking
+            self.transition_manager.start_transition("idle", "talking")
+            
+            # Step 2 & 3: Generate TTS and Lip-sync (streamed together)
+            async for frame_data in self._generate_talking_video(ai_response):
+                # Add timestamp for sync
+                if "timestamp" not in frame_data:
+                    frame_data["timestamp"] = time.time()
+                yield frame_data
+            
+            # Start transition from talking back to idle
+            self.transition_manager.start_transition("talking", "idle")
+            
+            # Record total latency
+            total_latency = (time.time() - pipeline_start_time) * 1000
+            self.metrics.record_total_latency(total_latency)
+            
+            # Reset error count on success
+            self.error_count = 0
+            
+            logger.info(f"✅ Pipeline complete: {total_latency:.0f}ms total")
+            
+        except Exception as e:
+            self.error_count += 1
+            logger.error(f"❌ Error in processing pipeline ({self.error_count}/{self.max_errors}): {e}")
+            logger.error(traceback.format_exc())
+            
+            # Send error to client
+            yield {
+                "type": "error",
+                "message": f"Processing failed: {str(e)}",
+                "timestamp": time.time()
+            }
+            
+            # If too many errors, stop processing
+            if self.error_count >= self.max_errors:
+                logger.error("❌ Too many errors, stopping processing")
+                self.is_processing = False
+                self.current_state = "idle"
+                return
+        
+        finally:
+            self.is_processing = False
+            self.current_state = "idle"
+    
     async def _process_buffered_audio(self):
         """
         Process buffered audio through the pipeline:

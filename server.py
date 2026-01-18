@@ -386,6 +386,26 @@ async def list_sessions():
     }
 
 
+@app.get("/api/scribe-token")
+async def get_scribe_token():
+    """
+    Generate a single-use token for ElevenLabs Scribe (client-side STT)
+    
+    Returns:
+        Single-use token for client-side transcription
+    """
+    try:
+        from elevenlabs.client import ElevenLabs
+        
+        client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+        token = client.tokens.single_use.create("realtime_scribe")
+        
+        return {"token": token}
+    except Exception as e:
+        logger.error(f"Failed to create Scribe token: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create token: {str(e)}")
+
+
 # ============================================================================
 # Avatar Preparation
 # ============================================================================
@@ -533,27 +553,22 @@ async def websocket_stream(websocket: WebSocket, session_id: str):
             
             message_type = data.get("type")
             
-            if message_type == "audio_chunk":
-                # Process audio chunk
-                audio_data = data.get("data")
-                if audio_data:
-                    logger.debug(f"🎤 Received audio chunk ({len(audio_data)} bytes)")
+            if message_type == "transcript":
+                # Receive transcribed text from client (ElevenLabs Scribe on frontend)
+                text = data.get("text", "").strip()
+                if text:
+                    logger.info(f"📝 Received transcript from client: {text}")
+                    
                     # Stop idle streaming if active
                     if not idle_task.done():
                         idle_task.cancel()
                     
-                    # Process audio
-                    status_update = await streaming_avatar.process_audio_chunk(audio_data)
-                    if status_update:
-                        await websocket.send_json(status_update)
+                    # Process the text directly (skip STT, go straight to LLM + TTS + lip-sync)
+                    async for result in streaming_avatar._process_text_input(text):
+                        await websocket.send_json(result)
                     
-                    # If processing started, stream results
-                    if streaming_avatar.is_processing:
-                        async for result in streaming_avatar._process_buffered_audio():
-                            await websocket.send_json(result)
-                        
-                        # Resume idle streaming
-                        idle_task = asyncio.create_task(stream_idle_frames(websocket, streaming_avatar))
+                    # Resume idle streaming
+                    idle_task = asyncio.create_task(stream_idle_frames(websocket, streaming_avatar))
             
             elif message_type == "start_speaking":
                 # User started speaking
@@ -562,15 +577,8 @@ async def websocket_stream(websocket: WebSocket, session_id: str):
                 await websocket.send_json({"type": "status", "state": "listening"})
             
             elif message_type == "stop_speaking":
-                # User stopped speaking - trigger processing
+                # User stopped speaking
                 logger.info("🛑 Received stop_speaking signal from client")
-                if streaming_avatar.audio_buffer and not streaming_avatar.audio_buffer.is_empty():
-                    logger.info(f"📊 Audio buffer has {len(streaming_avatar.audio_buffer.chunks)} chunks, triggering processing...")
-                    async for result in streaming_avatar._process_buffered_audio():
-                        await websocket.send_json(result)
-                else:
-                    logger.warning("⚠️ Audio buffer is empty, nothing to process")
-                
                 # Resume idle streaming
                 idle_task = asyncio.create_task(stream_idle_frames(websocket, streaming_avatar))
             
