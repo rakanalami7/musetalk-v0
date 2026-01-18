@@ -192,10 +192,16 @@ class IdleAnimationManager:
             Frame data with metadata
         """
         if not self.is_initialized or len(self.idle_frames) == 0:
-            logger.warning("Idle frames not initialized")
+            logger.warning("Idle frames not initialized, generating placeholder")
+            # Generate a valid placeholder frame
+            placeholder = np.zeros((256, 256, 3), dtype=np.uint8)
+            placeholder[:] = (50, 50, 50)  # Dark gray
+            _, buffer = cv2.imencode('.jpg', placeholder, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            placeholder_base64 = base64.b64encode(buffer.tobytes()).decode('utf-8')
+            
             return {
                 "type": "video_frame",
-                "data": "",
+                "data": placeholder_base64,
                 "frame_index": 0,
                 "timestamp": time.time(),
                 "is_idle": True

@@ -393,10 +393,11 @@ class StreamingAvatar:
     
     async def _transcribe_audio(self, audio_data: bytes) -> str:
         """
-        Transcribe audio using Whisper
+        Transcribe audio using ElevenLabs Scribe v2
+        Reference: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
         
         Args:
-            audio_data: Raw audio bytes
+            audio_data: Raw audio bytes (WAV format from MediaRecorder)
         
         Returns:
             Transcribed text
@@ -406,7 +407,8 @@ class StreamingAvatar:
         
         for attempt in range(max_retries):
             try:
-                logger.info(f"🎤 Transcribing audio (attempt {attempt + 1}/{max_retries})...")
+                logger.info(f"🎤 Transcribing audio with ElevenLabs Scribe (attempt {attempt + 1}/{max_retries})...")
+                
                 # Save audio to temporary file
                 import tempfile
                 with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
@@ -414,15 +416,25 @@ class StreamingAvatar:
                     audio_path = f.name
                 
                 try:
-                    # Use OpenAI's Whisper API for transcription
-                    with open(audio_path, "rb") as audio_file:
-                        transcript = await self.openai_client.audio.transcriptions.create(
-                            model="whisper-1",
-                            file=audio_file,
-                            response_format="text"
-                        )
+                    # Use ElevenLabs Scribe API for transcription
+                    # This is more accurate and faster than OpenAI Whisper
+                    import httpx
                     
-                    return transcript.strip()
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        with open(audio_path, "rb") as audio_file:
+                            response = await client.post(
+                                "https://api.elevenlabs.io/v1/speech-to-text",
+                                headers={"xi-api-key": self.elevenlabs_api_key},
+                                files={"audio": ("audio.wav", audio_file, "audio/wav")},
+                                data={"model_id": "scribe_v2"}  # Use Scribe v2 for best accuracy
+                            )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        transcript = result.get("text", "").strip()
+                        return transcript
+                    else:
+                        raise Exception(f"Scribe API error: {response.status_code} - {response.text}")
                     
                 finally:
                     # Cleanup temp file
@@ -531,10 +543,10 @@ class StreamingAvatar:
                     audio_generator = self.elevenlabs_client.text_to_speech.convert_as_stream(
                         voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice (default)
                         text=text,
-                        model_id="eleven_turbo_v2_5",  # Ultra-low latency (~75ms) for real-time
+                        model_id="eleven_multilingual_v2",  # Best quality for natural speech
                         voice_settings=VoiceSettings(
-                            stability=0.5,
-                            similarity_boost=0.75,
+                            stability=0.71,  # Higher stability for clearer speech
+                            similarity_boost=0.5,  # Balanced similarity
                             style=0.0,
                             use_speaker_boost=True
                         ),
