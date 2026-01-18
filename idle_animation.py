@@ -53,13 +53,23 @@ class IdleAnimationManager:
         try:
             logger.info(f"Generating {num_frames} idle frames...")
             
-            if not self.avatar or not hasattr(self.avatar, 'frame_list_cycle'):
-                logger.warning("Avatar not properly initialized, using placeholder frames")
+            # Check if avatar has frames (SimplifiedAvatar or full Avatar)
+            if not self.avatar:
+                logger.warning("Avatar not provided, using placeholder frames")
                 self._generate_placeholder_frames(num_frames)
                 return True
             
-            # Get base frame from avatar
-            base_frame = self.avatar.frame_list_cycle[0]
+            # Get base frame from avatar (support both SimplifiedAvatar and full Avatar)
+            if hasattr(self.avatar, 'frames') and len(self.avatar.frames) > 0:
+                # SimplifiedAvatar
+                base_frame = self.avatar.frames[0]
+            elif hasattr(self.avatar, 'frame_list_cycle') and len(self.avatar.frame_list_cycle) > 0:
+                # Full Avatar
+                base_frame = self.avatar.frame_list_cycle[0]
+            else:
+                logger.warning("Avatar not properly initialized, using placeholder frames")
+                self._generate_placeholder_frames(num_frames)
+                return True
             
             # Generate frames with occasional blinks
             for i in range(num_frames):
