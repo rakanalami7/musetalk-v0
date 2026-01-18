@@ -526,11 +526,12 @@ class StreamingAvatar:
             for tts_attempt in range(max_tts_retries):
                 try:
                     # Use the official stream method from ElevenLabs SDK
-                    # Reference: https://elevenlabs.io/docs/api-reference/text-to-speech
-                    audio_generator = await self.elevenlabs_client.text_to_speech.convert_as_stream(
+                    # Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/stream
+                    # Note: convert_as_stream returns an async generator, don't await it!
+                    audio_generator = self.elevenlabs_client.text_to_speech.convert_as_stream(
                         voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice (default)
                         text=text,
-                        model_id="eleven_multilingual_v2",
+                        model_id="eleven_turbo_v2_5",  # Ultra-low latency (~75ms) for real-time
                         voice_settings=VoiceSettings(
                             stability=0.5,
                             similarity_boost=0.75,
