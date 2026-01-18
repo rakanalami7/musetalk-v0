@@ -392,41 +392,47 @@ async def list_sessions():
 
 async def prepare_avatar(session_id: str, video_path: str, bbox_shift: int):
     """
-    Prepare avatar in background
-    This runs the Avatar initialization from realtime_inference.py
+    Prepare avatar in background using SimplifiedAvatar
+    Much faster than full MuseTalk preparation
     """
-    import time
+    from simplified_avatar import SimplifiedAvatar
     
     try:
-        logger.info(f"Starting avatar preparation for session {session_id}")
+        logger.info(f"Starting SimplifiedAvatar preparation for session {session_id}")
         session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=10)
         
-        # Import Avatar class
-        from scripts.realtime_inference import Avatar
-        from musetalk.utils.face_parsing import FaceParsing
+        # Create SimplifiedAvatar instance
+        batch_size = int(os.getenv("BATCH_SIZE", "8"))
+        fps = int(os.getenv("FPS", "25"))
         
-        # Initialize face parser
-        fp = FaceParsing(
-            left_cheek_width=int(os.getenv("LEFT_CHEEK_WIDTH", "90")),
-            right_cheek_width=int(os.getenv("RIGHT_CHEEK_WIDTH", "90"))
-        )
-        
+        logger.info(f"Creating SimplifiedAvatar for session {session_id}")
         session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=20)
         
-        # Create Avatar instance
-        batch_size = int(os.getenv("BATCH_SIZE", "8"))
-        
-        logger.info(f"Creating Avatar instance for session {session_id}")
-        session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=50)
-        
-        # Initialize Avatar with the uploaded video
-        avatar = Avatar(
-            avatar_id=video_path,
+        # Initialize SimplifiedAvatar
+        avatar = SimplifiedAvatar(
+            avatar_id=session_id,
             video_path=video_path,
             bbox_shift=bbox_shift,
+            vae=models.vae,
+            unet=models.unet,
+            pe=models.pe,
+            audio_processor=models.audio_processor,
+            whisper=models.whisper,
+            device=models.device,
+            weight_dtype=models.weight_dtype,
+            timesteps=models.timesteps,
             batch_size=batch_size,
-            preparation=True
+            fps=fps,
+            max_frames=250  # ~10 seconds at 25fps
         )
+        
+        session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=40)
+        
+        # Prepare avatar (extract frames + encode with VAE)
+        logger.info(f"Preparing avatar (extracting frames and encoding)...")
+        avatar.prepare()
+        
+        session_manager.update_session_status(session_id, SessionStatus.INITIALIZING, progress=80)
         
         # Store avatar instance in session
         session = session_manager.get_session(session_id)
@@ -434,10 +440,11 @@ async def prepare_avatar(session_id: str, video_path: str, bbox_shift: int):
             session.avatar_instance = avatar
         
         session_manager.update_session_status(session_id, SessionStatus.READY, progress=100)
-        logger.info(f"Avatar ready for session {session_id}")
+        logger.info(f"✅ SimplifiedAvatar ready for session {session_id}")
         
     except Exception as e:
         logger.error(f"Failed to prepare avatar for session {session_id}: {e}")
+        logger.error(traceback.format_exc())
         session_manager.update_session_status(
             session_id,
             SessionStatus.ERROR,
@@ -647,4 +654,3 @@ if __name__ == "__main__":
         reload=False,  # Set to True for development
         log_level="info"
     )
-
