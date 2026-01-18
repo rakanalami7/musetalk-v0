@@ -530,6 +530,7 @@ async def websocket_stream(websocket: WebSocket, session_id: str):
                 # Process audio chunk
                 audio_data = data.get("data")
                 if audio_data:
+                    logger.debug(f"🎤 Received audio chunk ({len(audio_data)} bytes)")
                     # Stop idle streaming if active
                     if not idle_task.done():
                         idle_task.cancel()
@@ -555,9 +556,13 @@ async def websocket_stream(websocket: WebSocket, session_id: str):
             
             elif message_type == "stop_speaking":
                 # User stopped speaking - trigger processing
+                logger.info("🛑 Received stop_speaking signal from client")
                 if streaming_avatar.audio_buffer and not streaming_avatar.audio_buffer.is_empty():
+                    logger.info(f"📊 Audio buffer has {len(streaming_avatar.audio_buffer.chunks)} chunks, triggering processing...")
                     async for result in streaming_avatar._process_buffered_audio():
                         await websocket.send_json(result)
+                else:
+                    logger.warning("⚠️ Audio buffer is empty, nothing to process")
                 
                 # Resume idle streaming
                 idle_task = asyncio.create_task(stream_idle_frames(websocket, streaming_avatar))
